@@ -1,4 +1,4 @@
-# RAG System (Retrieval-Augmented Generation)
+# RAG System (Retrieval-Augmented Generation) with Cross-Encoders
 
 A comprehensive Retrieval-Augmented Generation (RAG) system designed to enhance language model responses with relevant context retrieved from documents. This modular system allows for flexible document processing, embedding, and retrieval workflows.
 
@@ -11,12 +11,13 @@ This RAG system implements a complete pipeline for processing documents and answ
 - **Embedding**: Generate vector representations of text
 - **Vector Storage**: Store embeddings in FAISS for efficient similarity search
 - **Retrieval**: Find relevant document chunks based on queries
+- **Re-Ranking**: Advanced technique using cross-encoders to re-rank retrieved results for improved relevance
 - **Generation**: Generate answers using retrieved context
 
 ## 🏗️ Architecture
 
 ```
-[Document] → [Chunker] → [Embedder] → [Vector Store] → [Retriever] → [LLM] → [Answer]
+[Document] → [Chunker] → [Embedder] → [Vector Store] → [Retriever] → [Re-Ranker] → [LLM] → [Answer]
 ```
 
 ### Components
@@ -26,6 +27,7 @@ This RAG system implements a complete pipeline for processing documents and answ
 - **Embedder**: Uses Sentence Transformers for high-quality text embeddings
 - **Vector Store**: Leverages FAISS for efficient similarity search
 - **Retriever**: Finds most relevant document chunks for a given query
+- **Re-Ranker**: Advanced technique that re-ranks retrieved results using cross-encoders for improved relevance
 - **Generator**: Combines retrieved context with LLM to generate answers
 
 ## 🛠️ Tech Stack
@@ -33,6 +35,7 @@ This RAG system implements a complete pipeline for processing documents and answ
 - **Python**: Core programming language
 - **FAISS**: Efficient similarity search and clustering of dense vectors
 - **Sentence Transformers**: State-of-the-art sentence, text, and image embeddings
+- **Cross-Encoders**: Advanced re-ranking using cross-encoder models for improved relevance
 - **PyPDF2/pdfplumber**: PDF document processing
 - **NumPy**: Numerical computing
 - **Abstract Base Classes**: Enforced modularity and extensibility
@@ -58,7 +61,7 @@ Make sure to install the following packages:
 
 ```bash
 pip install torch torchvision torchaudio
-pip install sentence-transformers
+pip install sentence-transformers  # Includes cross-encoders
 pip install faiss-cpu
 pip install PyPDF2 pdfplumber
 pip install transformers
@@ -74,6 +77,7 @@ from Chunking.simple_chunker import SimpleChunker
 from Embedding.sentence_transformer import SentenceTransformerEmbedder
 from vector_store.faiss_store import FaissVectorStore
 from Retriever.retriever import Retriever
+from Re_Ranker import ReRanker
 from generator.llm import LLMGenerator
 
 # Initialize components
@@ -90,12 +94,16 @@ store = FaissVectorStore(len(embeddings[0]))
 store.add(embeddings, chunks)
 
 retriever = Retriever(embedder, store)
+reranker = ReRanker()  # Initialize the re-ranker
 llm = LLMGenerator()
 
 # Ask a question
 question = "What is RAG and what is retrieval process how faiss handle it?"
-contexts = retriever.retrieve(question)
-context_text = " ".join(contexts)
+initial_contexts = retriever.retrieve(question)  # Initial retrieval from vector store
+
+# Apply re-ranking to improve relevance
+reranked_contexts = reranker.rerank(question, initial_contexts, top_k=3)
+context_text = " ".join(reranked_contexts)
 answer = llm.generate(context_text, question)
 
 print(answer)
@@ -127,6 +135,12 @@ print(answer)
 ### Generator
 - `LLMGenerator`: Combines retrieved context with language model for answer generation
 - Flexible interface for different LLM providers
+
+### Re-Ranker
+- `ReRanker`: Implements advanced re-ranking using cross-encoders to improve result relevance
+- Uses pre-trained models like "cross-encoder/ms-marco-MiniLM-L-6-v2" for semantic matching
+- Takes initial retrieval results and re-scores them based on query-chunk similarity
+- Returns top-k most relevant chunks after re-ranking for enhanced answer quality
 
 ## 🔧 Configuration
 
